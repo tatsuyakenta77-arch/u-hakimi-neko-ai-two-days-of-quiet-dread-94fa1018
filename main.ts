@@ -4,7 +4,7 @@
 // /output/entry.txt (or $MAKEFUN_OUTPUT_DIR/entry.txt for local runs) and
 // prints exactly that line to stdout. No network, no randomness: every run
 // writes the same bytes.
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const ENTRY =
@@ -22,5 +22,11 @@ if (
 
 const outDir = process.env.MAKEFUN_OUTPUT_DIR ?? "/output";
 mkdirSync(outDir, { recursive: true });
-writeFileSync(join(outDir, "entry.txt"), ENTRY, "utf8");
+const outPath = join(outDir, "entry.txt");
+writeFileSync(outPath, ENTRY, "utf8");
+// Write-back guard: the bytes on disk must be exactly the entry, so a
+// truncated or re-encoded write fails loudly instead of shipping a bad file.
+if (readFileSync(outPath, "utf8") !== ENTRY) {
+  throw new Error("entry.txt on disk differs from the entry");
+}
 process.stdout.write(ENTRY);
